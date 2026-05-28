@@ -3,7 +3,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, ForeignKey, String, Text
+from sqlalchemy import Boolean, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,11 +23,25 @@ class Notification(BaseModel, Base):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    notification_type: Mapped[str] = mapped_column(
-        String(30), default=NotificationType.INFO.value, nullable=False
+    notification_type: Mapped[NotificationType] = mapped_column(
+        Enum(
+            NotificationType,
+            name="notification_type_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=NotificationType.INFO,
+        nullable=False,
     )
-    priority: Mapped[str] = mapped_column(
-        String(20), default=NotificationPriority.MEDIUM.value, nullable=False
+    priority: Mapped[NotificationPriority] = mapped_column(
+        Enum(
+            NotificationPriority,
+            name="notification_priority_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=NotificationPriority.MEDIUM,
+        nullable=False,
     )
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     action_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

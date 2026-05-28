@@ -5,7 +5,7 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Date, ForeignKey, Numeric, String, Text
+from sqlalchemy import Date, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,8 +31,15 @@ class Employee(BaseModel, Base):
     gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
     address: Mapped[str | None] = mapped_column(Text, nullable=True)
     emergency_contact: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    employment_status: Mapped[str] = mapped_column(
-        String(30), default=EmploymentStatus.ACTIVE.value, nullable=False
+    employment_status: Mapped[EmploymentStatus] = mapped_column(
+        Enum(
+            EmploymentStatus,
+            name="employment_status_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=EmploymentStatus.ACTIVE,
+        nullable=False,
     )
     salary: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
 
@@ -60,9 +67,17 @@ class Employee(BaseModel, Base):
         "Employee", remote_side="Employee.id", foreign_keys=[manager_id]
     )
     attendances: Mapped[List["Attendance"]] = relationship(
-        "Attendance", back_populates="employee", foreign_keys="Attendance.employee_id"
+        "Attendance",
+        back_populates="employee",
+        foreign_keys="Attendance.employee_id",
     )
-    leaves: Mapped[List["Leave"]] = relationship("Leave", back_populates="employee")
+    leaves: Mapped[List["Leave"]] = relationship(
+        "Leave",
+        back_populates="employee",
+        foreign_keys="Leave.employee_id",
+    )
     assigned_tasks: Mapped[List["Task"]] = relationship(
-        "Task", back_populates="assignee", foreign_keys="Task.assignee_id"
+        "Task",
+        back_populates="assignee",
+        foreign_keys="Task.assignee_id",
     )

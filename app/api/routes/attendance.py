@@ -3,8 +3,11 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, DbSession, require_roles
+from app.core.database import get_db
+from app.core.dependencies import get_current_user, require_roles
+from app.models.user import User
 from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.attendance import (
     AttendanceApprovalRequest,
@@ -20,8 +23,6 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
 
-LeadRoles = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN, RoleName.TEAM_LEAD))
-
 
 async def _get_employee_id(db, user) -> UUID:
     repo = EmployeeRepository(db)
@@ -32,7 +33,11 @@ async def _get_employee_id(db, user) -> UUID:
 
 
 @router.post("/check-in")
-async def check_in(data: CheckInRequest, db: DbSession, current_user: CurrentUser):
+async def check_in(
+    data: CheckInRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     employee_id = await _get_employee_id(db, current_user)
     service = AttendanceService(db)
     record = await service.check_in(employee_id, data)
@@ -43,7 +48,11 @@ async def check_in(data: CheckInRequest, db: DbSession, current_user: CurrentUse
 
 
 @router.post("/check-out")
-async def check_out(data: CheckOutRequest, db: DbSession, current_user: CurrentUser):
+async def check_out(
+    data: CheckOutRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     employee_id = await _get_employee_id(db, current_user)
     service = AttendanceService(db)
     record = await service.check_out(employee_id, data)
@@ -55,8 +64,8 @@ async def check_out(data: CheckOutRequest, db: DbSession, current_user: CurrentU
 
 @router.get("/my")
 async def my_attendance(
-    db: DbSession,
-    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
@@ -76,9 +85,10 @@ async def my_attendance(
 async def approve_attendance(
     attendance_id: UUID,
     data: AttendanceApprovalRequest,
-    db: DbSession,
-    current_user: CurrentUser,
-    _: LeadRoles,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN, RoleName.TEAM_LEAD)
+    ),
 ):
     employee_id = await _get_employee_id(db, current_user)
     service = AttendanceService(db)

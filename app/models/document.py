@@ -3,7 +3,7 @@
 import uuid
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,8 +22,15 @@ class Document(BaseModel, Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     file_url: Mapped[str] = mapped_column(String(500), nullable=False)
     file_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    document_type: Mapped[str] = mapped_column(
-        String(30), default=DocumentType.OTHER.value, nullable=False
+    document_type: Mapped[DocumentType] = mapped_column(
+        Enum(
+            DocumentType,
+            name="document_type_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=DocumentType.OTHER,
+        nullable=False,
     )
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

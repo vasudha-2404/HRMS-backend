@@ -3,8 +3,11 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, DbSession, require_roles
+from app.core.database import get_db
+from app.core.dependencies import get_current_user, require_roles
+from app.models.user import User
 from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.leave import (
     LeaveApprovalRequest,
@@ -20,9 +23,6 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/leaves", tags=["Leaves"])
 
-TeamLeadRoles = Depends(require_roles(RoleName.TEAM_LEAD, RoleName.SUPER_ADMIN))
-HRRoles = Depends(require_roles(RoleName.HR_ADMIN, RoleName.SUPER_ADMIN))
-
 
 async def _get_employee_id(db, user) -> UUID:
     repo = EmployeeRepository(db)
@@ -33,7 +33,11 @@ async def _get_employee_id(db, user) -> UUID:
 
 
 @router.post("/apply")
-async def apply_leave(data: LeaveCreate, db: DbSession, current_user: CurrentUser):
+async def apply_leave(
+    data: LeaveCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     employee_id = await _get_employee_id(db, current_user)
     service = LeaveService(db)
     leave = await service.apply(employee_id, data)
@@ -45,8 +49,8 @@ async def apply_leave(data: LeaveCreate, db: DbSession, current_user: CurrentUse
 
 @router.get("")
 async def list_leaves(
-    db: DbSession,
-    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: str | None = None,
@@ -65,8 +69,8 @@ async def list_leaves(
 
 @router.get("/all")
 async def list_all_leaves(
-    db: DbSession,
-    _: HRRoles,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(require_roles(RoleName.HR_ADMIN, RoleName.SUPER_ADMIN)),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: str | None = None,
@@ -86,9 +90,8 @@ async def list_all_leaves(
 async def team_lead_approve(
     leave_id: UUID,
     data: LeaveApprovalRequest,
-    db: DbSession,
-    current_user: CurrentUser,
-    _: TeamLeadRoles,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleName.TEAM_LEAD, RoleName.SUPER_ADMIN)),
 ):
     approver_id = await _get_employee_id(db, current_user)
     service = LeaveService(db)
@@ -103,9 +106,8 @@ async def team_lead_approve(
 async def hr_approve(
     leave_id: UUID,
     data: LeaveApprovalRequest,
-    db: DbSession,
-    current_user: CurrentUser,
-    _: HRRoles,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleName.HR_ADMIN, RoleName.SUPER_ADMIN)),
 ):
     approver_id = await _get_employee_id(db, current_user)
     service = LeaveService(db)
@@ -120,9 +122,8 @@ async def hr_approve(
 async def reject_leave(
     leave_id: UUID,
     data: LeaveRejectRequest,
-    db: DbSession,
-    current_user: CurrentUser,
-    _: TeamLeadRoles,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(RoleName.TEAM_LEAD, RoleName.SUPER_ADMIN)),
 ):
     role = current_user.role.name if current_user.role else ""
     service = LeaveService(db)

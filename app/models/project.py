@@ -4,12 +4,13 @@ import uuid
 from datetime import date
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Date, ForeignKey, String, Text
+from sqlalchemy import Date, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.base import BaseModel
+from app.utils.enums import ProjectStatus
 
 if TYPE_CHECKING:
     from app.models.department import Department
@@ -25,7 +26,16 @@ class Project(BaseModel, Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    status: Mapped[ProjectStatus] = mapped_column(
+        Enum(
+            ProjectStatus,
+            name="project_status_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=ProjectStatus.ACTIVE,
+        nullable=False,
+    )
 
     department_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("departments.id"), nullable=True

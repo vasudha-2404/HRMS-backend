@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -31,8 +31,15 @@ class Attendance(BaseModel, Base):
     check_out_latitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7), nullable=True)
     check_out_longitude: Mapped[Decimal | None] = mapped_column(Numeric(10, 7), nullable=True)
     total_hours: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
-    status: Mapped[str] = mapped_column(
-        String(30), default=AttendanceStatus.PRESENT.value, nullable=False
+    status: Mapped[AttendanceStatus] = mapped_column(
+        Enum(
+            AttendanceStatus,
+            name="attendance_status_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=AttendanceStatus.PRESENT,
+        nullable=False,
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_approved: Mapped[bool] = mapped_column(default=False, nullable=False)

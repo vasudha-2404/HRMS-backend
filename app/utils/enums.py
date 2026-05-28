@@ -95,3 +95,30 @@ class EmploymentStatus(str, Enum):
     ON_LEAVE = "on_leave"
     TERMINATED = "terminated"
     PROBATION = "probation"
+
+
+class EmploymentType(str, Enum):
+    FULL_TIME = "full_time"
+    PART_TIME = "part_time"
+    CONTRACT = "contract"
+    INTERN = "intern"
+
+
+class InterviewStatus(str, Enum):
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    NO_SHOW = "no_show"
+
+
+class ProjectStatus(str, Enum):
+    ACTIVE = "active"
+    ON_HOLD = "on_hold"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class InternStatus(str, Enum):
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    DROPPED = "dropped"

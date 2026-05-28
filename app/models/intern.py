@@ -4,12 +4,13 @@ import uuid
 from datetime import date
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Date, Float, ForeignKey, String, Text
+from sqlalchemy import Date, Enum, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.base import BaseModel
+from app.utils.enums import InternStatus
 
 if TYPE_CHECKING:
     from app.models.employee import Employee
@@ -37,7 +38,16 @@ class Intern(BaseModel, Base):
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     stipend: Mapped[float | None] = mapped_column(Float, nullable=True)
-    status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    status: Mapped[InternStatus] = mapped_column(
+        Enum(
+            InternStatus,
+            name="intern_status_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=InternStatus.ACTIVE,
+        nullable=False,
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=False

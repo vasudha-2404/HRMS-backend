@@ -1,10 +1,13 @@
 """Internship management routes."""
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from datetime import date
 
-from app.core.dependencies import DbSession, require_roles
+from app.core.database import get_db
+from app.core.dependencies import require_roles
+from app.models.user import User
 from app.models.intern import InternBatch
 from app.repositories.base import BaseRepository
 from app.schemas.common import TimestampSchema
@@ -13,8 +16,6 @@ from app.utils.pagination import build_paginated_result
 from app.utils.response import success_response
 
 router = APIRouter(prefix="/interns", tags=["Internships"])
-
-AdminRoles = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN))
 
 
 class InternBatchCreate(BaseModel):
@@ -33,8 +34,8 @@ class InternBatchResponse(TimestampSchema):
 
 @router.get("/batches")
 async def list_batches(
-    db: DbSession,
-    _: AdminRoles,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN)),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
@@ -50,7 +51,11 @@ async def list_batches(
 
 
 @router.post("/batches", status_code=status.HTTP_201_CREATED)
-async def create_batch(data: InternBatchCreate, db: DbSession, _: AdminRoles):
+async def create_batch(
+    data: InternBatchCreate,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN)),
+):
     batch = InternBatch(**data.model_dump())
     repo = BaseRepository(InternBatch, db)
     created = await repo.create(batch)

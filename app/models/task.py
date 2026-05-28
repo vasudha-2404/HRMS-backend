@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, Text
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,11 +23,25 @@ class Task(BaseModel, Base):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(
-        String(30), default=TaskStatus.TODO.value, nullable=False
+    status: Mapped[TaskStatus] = mapped_column(
+        Enum(
+            TaskStatus,
+            name="task_status_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=TaskStatus.TODO,
+        nullable=False,
     )
-    priority: Mapped[str] = mapped_column(
-        String(20), default=TaskPriority.MEDIUM.value, nullable=False
+    priority: Mapped[TaskPriority] = mapped_column(
+        Enum(
+            TaskPriority,
+            name="task_priority_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=TaskPriority.MEDIUM,
+        nullable=False,
     )
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -3,8 +3,11 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import DbSession, require_roles
+from app.core.database import get_db
+from app.core.dependencies import require_roles
+from app.models.user import User
 from app.schemas.recruitment import (
     ApplicantCreate,
     ApplicantResponse,
@@ -22,12 +25,10 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/recruitment", tags=["Recruitment ATS"])
 
-HRRoles = Depends(require_roles(RoleName.HR_ADMIN, RoleName.SUPER_ADMIN, RoleName.REVIEWER))
-
 
 @router.get("/jobs")
 async def list_jobs(
-    db: DbSession,
+    db: AsyncSession = Depends(get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
@@ -43,7 +44,13 @@ async def list_jobs(
 
 
 @router.post("/jobs", status_code=status.HTTP_201_CREATED)
-async def create_job(data: JobOpeningCreate, db: DbSession, _: HRRoles):
+async def create_job(
+    data: JobOpeningCreate,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(RoleName.HR_ADMIN, RoleName.SUPER_ADMIN, RoleName.REVIEWER)
+    ),
+):
     service = RecruitmentService(db)
     job = await service.create_job(data, None)
     return success_response(
@@ -53,7 +60,10 @@ async def create_job(data: JobOpeningCreate, db: DbSession, _: HRRoles):
 
 
 @router.post("/applicants", status_code=status.HTTP_201_CREATED)
-async def create_applicant(data: ApplicantCreate, db: DbSession):
+async def create_applicant(
+    data: ApplicantCreate,
+    db: AsyncSession = Depends(get_db),
+):
     service = RecruitmentService(db)
     applicant = await service.create_applicant(data)
     return success_response(
@@ -64,7 +74,12 @@ async def create_applicant(data: ApplicantCreate, db: DbSession):
 
 @router.patch("/applicants/{applicant_id}/stage")
 async def update_applicant_stage(
-    applicant_id: UUID, data: ApplicantStageUpdate, db: DbSession, _: HRRoles
+    applicant_id: UUID,
+    data: ApplicantStageUpdate,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(RoleName.HR_ADMIN, RoleName.SUPER_ADMIN, RoleName.REVIEWER)
+    ),
 ):
     service = RecruitmentService(db)
     applicant = await service.update_applicant_stage(applicant_id, data)
@@ -76,8 +91,10 @@ async def update_applicant_stage(
 
 @router.get("/kanban")
 async def get_kanban_board(
-    db: DbSession,
-    _: HRRoles,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(RoleName.HR_ADMIN, RoleName.SUPER_ADMIN, RoleName.REVIEWER)
+    ),
     job_opening_id: UUID | None = None,
 ):
     service = RecruitmentService(db)
@@ -86,7 +103,13 @@ async def get_kanban_board(
 
 
 @router.post("/interviews", status_code=status.HTTP_201_CREATED)
-async def schedule_interview(data: InterviewCreate, db: DbSession, _: HRRoles):
+async def schedule_interview(
+    data: InterviewCreate,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(RoleName.HR_ADMIN, RoleName.SUPER_ADMIN, RoleName.REVIEWER)
+    ),
+):
     service = RecruitmentService(db)
     interview = await service.schedule_interview(data)
     return success_response(
@@ -97,7 +120,12 @@ async def schedule_interview(data: InterviewCreate, db: DbSession, _: HRRoles):
 
 @router.patch("/interviews/{interview_id}/feedback")
 async def submit_feedback(
-    interview_id: UUID, data: InterviewFeedback, db: DbSession, _: HRRoles
+    interview_id: UUID,
+    data: InterviewFeedback,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(RoleName.HR_ADMIN, RoleName.SUPER_ADMIN, RoleName.REVIEWER)
+    ),
 ):
     service = RecruitmentService(db)
     interview = await service.submit_interview_feedback(interview_id, data)

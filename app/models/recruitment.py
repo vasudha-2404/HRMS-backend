@@ -4,13 +4,13 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.base import BaseModel
-from app.utils.enums import ApplicantStage
+from app.utils.enums import ApplicantStage, EmploymentType, InterviewStatus
 
 if TYPE_CHECKING:
     from app.models.employee import Employee
@@ -23,7 +23,16 @@ class JobOpening(BaseModel, Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     department: Mapped[str | None] = mapped_column(String(100), nullable=True)
     location: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    employment_type: Mapped[str] = mapped_column(String(50), default="full_time", nullable=False)
+    employment_type: Mapped[EmploymentType] = mapped_column(
+        Enum(
+            EmploymentType,
+            name="employment_type_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=EmploymentType.FULL_TIME,
+        nullable=False,
+    )
     vacancies: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     salary_range: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
@@ -43,8 +52,15 @@ class Applicant(BaseModel, Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     resume_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    stage: Mapped[str] = mapped_column(
-        String(30), default=ApplicantStage.APPLIED.value, nullable=False
+    stage: Mapped[ApplicantStage] = mapped_column(
+        Enum(
+            ApplicantStage,
+            name="applicant_stage_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=ApplicantStage.APPLIED,
+        nullable=False,
     )
     source: Mapped[str | None] = mapped_column(String(50), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -78,7 +94,16 @@ class Interview(BaseModel, Base):
     meeting_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    status: Mapped[str] = mapped_column(String(30), default="scheduled", nullable=False)
+    status: Mapped[InterviewStatus] = mapped_column(
+        Enum(
+            InterviewStatus,
+            name="interview_status_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=InterviewStatus.SCHEDULED,
+        nullable=False,
+    )
 
     applicant: Mapped["Applicant"] = relationship("Applicant", back_populates="interviews")
     interviewer: Mapped[Optional["Employee"]] = relationship("Employee")

@@ -3,8 +3,11 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import CurrentUser, DbSession, require_roles
+from app.core.database import get_db
+from app.core.dependencies import get_current_user, require_roles
+from app.models.user import User
 from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.task import TaskCommentCreate, TaskCommentResponse, TaskCreate, TaskResponse, TaskUpdate
 from app.services.task_service import TaskService
@@ -14,13 +17,11 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
-ManagerRoles = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN, RoleName.TEAM_LEAD))
-
 
 @router.get("")
 async def list_tasks(
-    db: DbSession,
-    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: str | None = None,
@@ -40,7 +41,13 @@ async def list_tasks(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_task(data: TaskCreate, db: DbSession, current_user: CurrentUser, _: ManagerRoles):
+async def create_task(
+    data: TaskCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN, RoleName.TEAM_LEAD)
+    ),
+):
     repo = EmployeeRepository(db)
     employee = await repo.get_by_user_id(current_user.id)
     service = TaskService(db)
@@ -49,7 +56,11 @@ async def create_task(data: TaskCreate, db: DbSession, current_user: CurrentUser
 
 
 @router.get("/{task_id}")
-async def get_task(task_id: UUID, db: DbSession, current_user: CurrentUser):
+async def get_task(
+    task_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     service = TaskService(db)
     task = await service.get(task_id)
     return success_response(TaskResponse.model_validate(task).model_dump())
@@ -57,7 +68,10 @@ async def get_task(task_id: UUID, db: DbSession, current_user: CurrentUser):
 
 @router.patch("/{task_id}")
 async def update_task(
-    task_id: UUID, data: TaskUpdate, db: DbSession, current_user: CurrentUser
+    task_id: UUID,
+    data: TaskUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = TaskService(db)
     task = await service.update(task_id, data)
@@ -65,7 +79,13 @@ async def update_task(
 
 
 @router.delete("/{task_id}")
-async def delete_task(task_id: UUID, db: DbSession, _: ManagerRoles):
+async def delete_task(
+    task_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN, RoleName.TEAM_LEAD)
+    ),
+):
     service = TaskService(db)
     await service.delete(task_id)
     return success_response(None, "Task deleted")
@@ -75,8 +95,8 @@ async def delete_task(task_id: UUID, db: DbSession, _: ManagerRoles):
 async def add_comment(
     task_id: UUID,
     data: TaskCommentCreate,
-    db: DbSession,
-    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = TaskService(db)
     comment = await service.add_comment(task_id, current_user.id, data)

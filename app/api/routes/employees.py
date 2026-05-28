@@ -3,8 +3,11 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import DbSession, require_roles
+from app.core.database import get_db
+from app.core.dependencies import require_roles
+from app.models.user import User
 from app.schemas.employee import EmployeeCreate, EmployeeResponse, EmployeeUpdate
 from app.services.employee_service import EmployeeService
 from app.utils.enums import RoleName
@@ -13,13 +16,13 @@ from app.utils.response import success_response
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
 
-AdminRoles = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN))
-
 
 @router.get("")
 async def list_employees(
-    db: DbSession,
-    _: AdminRoles,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(
+        require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN)
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     search: str | None = None,
@@ -36,7 +39,11 @@ async def list_employees(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_employee(data: EmployeeCreate, db: DbSession, _: AdminRoles):
+async def create_employee(
+    data: EmployeeCreate,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN)),
+):
     service = EmployeeService(db)
     employee = await service.create(data)
     return success_response(
@@ -46,7 +53,11 @@ async def create_employee(data: EmployeeCreate, db: DbSession, _: AdminRoles):
 
 
 @router.get("/{employee_id}")
-async def get_employee(employee_id: UUID, db: DbSession, _: AdminRoles):
+async def get_employee(
+    employee_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN)),
+):
     service = EmployeeService(db)
     employee = await service.get(employee_id)
     resp = EmployeeResponse.model_validate(employee).model_dump()
@@ -58,7 +69,10 @@ async def get_employee(employee_id: UUID, db: DbSession, _: AdminRoles):
 
 @router.patch("/{employee_id}")
 async def update_employee(
-    employee_id: UUID, data: EmployeeUpdate, db: DbSession, _: AdminRoles
+    employee_id: UUID,
+    data: EmployeeUpdate,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN)),
 ):
     service = EmployeeService(db)
     employee = await service.update(employee_id, data)
@@ -69,7 +83,11 @@ async def update_employee(
 
 
 @router.delete("/{employee_id}")
-async def delete_employee(employee_id: UUID, db: DbSession, _: AdminRoles):
+async def delete_employee(
+    employee_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _current_user: User = Depends(require_roles(RoleName.SUPER_ADMIN, RoleName.HR_ADMIN)),
+):
     service = EmployeeService(db)
     await service.delete(employee_id)
     return success_response(None, "Employee deleted")

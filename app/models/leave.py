@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, Text
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,13 +22,28 @@ class Leave(BaseModel, Base):
     employee_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("employees.id"), nullable=False, index=True
     )
-    leave_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    leave_type: Mapped[LeaveType] = mapped_column(
+        Enum(
+            LeaveType,
+            name="leave_type_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        nullable=False,
+    )
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
     total_days: Mapped[int] = mapped_column(nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(30), default=LeaveStatus.PENDING.value, nullable=False
+    status: Mapped[LeaveStatus] = mapped_column(
+        Enum(
+            LeaveStatus,
+            name="leave_status_enum",
+            create_type=False,
+            values_callable=lambda enum: [e.value for e in enum],
+        ),
+        default=LeaveStatus.PENDING,
+        nullable=False,
     )
     team_lead_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("employees.id"), nullable=True
@@ -47,11 +62,15 @@ class Leave(BaseModel, Base):
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     employee: Mapped["Employee"] = relationship(
-        "Employee", back_populates="leaves", foreign_keys=[employee_id]
+        "Employee",
+        back_populates="leaves",
+        foreign_keys=[employee_id],
     )
-    team_lead: Mapped[Optional["Employee"]] = relationship(
-        "Employee", foreign_keys=[team_lead_id]
+    approved_by_employee: Mapped[Optional["Employee"]] = relationship(
+        "Employee",
+        foreign_keys=[team_lead_id],
     )
-    hr_approver: Mapped[Optional["Employee"]] = relationship(
-        "Employee", foreign_keys=[hr_approved_by_id]
+    reviewed_by_employee: Mapped[Optional["Employee"]] = relationship(
+        "Employee",
+        foreign_keys=[hr_approved_by_id],
     )
