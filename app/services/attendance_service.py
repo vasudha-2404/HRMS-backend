@@ -43,6 +43,7 @@ class AttendanceService:
             existing.notes = data.notes
             existing.status = AttendanceStatus.PRESENT.value
             await self.db.flush()
+            await self.db.refresh(existing)
             return existing
 
         record = Attendance(
@@ -76,6 +77,7 @@ class AttendanceService:
         delta = now - record.check_in
         record.total_hours = Decimal(str(round(delta.total_seconds() / 3600, 2)))
         await self.db.flush()
+        await self.db.refresh(record)
         return record
 
     async def approve(

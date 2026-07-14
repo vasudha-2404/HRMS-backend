@@ -11,6 +11,12 @@ from app.schemas.common import BaseSchema
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=6)
+    role: str
+
+
+class GoogleTokenRequest(BaseModel):
+    id_token: str
+    role: str
 
 
 class RegisterRequest(BaseModel):
@@ -43,6 +49,7 @@ class UserResponse(BaseSchema):
     phone: str | None
     is_active: bool
     is_verified: bool
+    onboarding_completed: bool
     last_login: datetime | None
     role: RoleResponse | None = None
 
@@ -55,3 +62,11 @@ class UserUpdateRequest(BaseModel):
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str = Field(min_length=8)
+
+
+class CompleteProfileRequest(BaseModel):
+    role: str
+    full_name: str
+    phone: str | None = None
+    department: str | None = None
+    employee_code: str | None = None

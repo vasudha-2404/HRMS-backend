@@ -1,5 +1,9 @@
 """PathVision HRMS - FastAPI application entry point."""
 
+import os
+import certifi
+os.environ["SSL_CERT_FILE"] = certifi.where()
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -40,15 +44,23 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(LoggingMiddleware)
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=[
+            "http://localhost:5000",
+            "http://127.0.0.1:5000",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8080",
+            "http://127.0.0.1:8080"
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_middleware(RateLimitMiddleware)
-    app.add_middleware(LoggingMiddleware)
 
     register_exception_handlers(app)
 

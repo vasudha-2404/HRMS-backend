@@ -18,7 +18,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not settings.RATE_LIMIT_ENABLED:
             return await call_next(request)
 
-        if request.url.path in ("/health", "/docs", "/openapi.json", "/redoc"):
+        if request.method == "OPTIONS" or request.url.path in ("/health", "/docs", "/openapi.json", "/redoc"):
             return await call_next(request)
 
         client_ip = request.client.host if request.client else "unknown"

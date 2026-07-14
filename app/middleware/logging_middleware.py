@@ -13,6 +13,9 @@ logger = logging.getLogger("pathvision.access")
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
+        if request.method == "OPTIONS":
+            return await call_next(request)
+            
         request_id = str(uuid.uuid4())[:8]
         start = time.perf_counter()
 

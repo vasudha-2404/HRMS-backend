@@ -25,13 +25,22 @@ async def get_current_user(
     credentials: TokenCredentials,
 ) -> User:
     if not credentials or not credentials.credentials:
+        print("DEBUG AUTH: No credentials or token found")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
 
     payload = decode_token(credentials.credentials)
-    if not payload or payload.get("type") != "access":
+    if not payload:
+        print("DEBUG AUTH: decode_token failed to decode")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    
+    if payload.get("type") != "access":
+        print(f"DEBUG AUTH: token type is not access, got {payload.get('type')}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
@@ -39,6 +48,7 @@ async def get_current_user(
 
     user_id = payload.get("sub")
     if not user_id:
+        print("DEBUG AUTH: token sub (user_id) is missing")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
@@ -50,7 +60,15 @@ async def get_current_user(
         .where(User.id == UUID(user_id), User.deleted_at.is_(None))
     )
     user = result.scalar_one_or_none()
-    if not user or not user.is_active:
+    if not user:
+        print(f"DEBUG AUTH: user with id {user_id} not found in DB")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+        )
+        
+    if not user.is_active:
+        print(f"DEBUG AUTH: user {user.email} is inactive")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",

@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    GOOGLE_WEB_CLIENT_ID: str = "930149670726-h7rf1gak4f6m9uqihbtvbtscvv3sar2s.apps.googleusercontent.com"
+
     REDIS_URL: str = "redis://localhost:6379/0"
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"

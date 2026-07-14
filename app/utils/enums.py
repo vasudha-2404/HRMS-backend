@@ -10,6 +10,7 @@ class RoleName(str, Enum):
     EMPLOYEE = "employee"
     INTERN = "intern"
     REVIEWER = "reviewer"
+    DEVELOPER = "developer"
 
 
 class LeaveStatus(str, Enum):
